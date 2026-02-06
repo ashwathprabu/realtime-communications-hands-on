@@ -20,7 +20,7 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/part-3/s2-sse-redis-adapter-pub-sub/server-1.js"
+            "program": "${workspaceFolder}/part-3/s2-sse-redis-adapter-pub-sub/server-2.js"
         },
         {
             "type": "node",

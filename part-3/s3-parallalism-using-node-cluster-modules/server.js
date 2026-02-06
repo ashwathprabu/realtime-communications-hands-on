@@ -5,12 +5,7 @@ const numCPUs = require('node:os').availableParallelism()
 const compression = require('compression')
 
 const port = process.env.PORT || 3000
-
 const routes = require('./app')
-
-// Check if we should use clustering based on PM2's environment
-// PM2 will run in cluster mode, so we shouldn't use Node's built-in clustering
-const isPM2 = 'PM2_HOME' in process.env || process.env.NODE_ENV === 'production'
 
 // Function to create and set up the Express app
 const createApp = () => {
@@ -33,37 +28,29 @@ const createApp = () => {
 }
 
 // Function to start the server
-const startServer = async () => {
-    try {
+const startServer = () => {
+    const app = createApp()
 
-        const app = createApp()
-        app.listen(port, () => {
-            console.log(`Worker ${process.pid} listening on http://localhost:${port}`)
-        })
-        console.log(`Worker ${process.pid} started`)
-    } catch (error) {
-        console.error(error)
-        process.exit(1) // Exit process with failure
-    }
+    app.listen(port, () => {
+        console.log(`Worker ${process.pid} listening on http://localhost:${port}`)
+    })
 }
 
-// If we're using PM2 or this is a worker thread, start the server directly
-if (isPM2 || !cluster.isPrimary) {
-    startServer()
-} else {
-    // If this is the primary thread and we're not using PM2, fork workers
+// Cluster logic
+if (cluster.isPrimary) {
     console.log(`Primary ${process.pid} is running`)
     console.log(`Forking ${numCPUs} workers...`)
 
-    // Fork workers
-    for (let i = 0; i < numCPUs; i += 1) {
+    for (let i = 0; i < numCPUs; i++) {
         cluster.fork()
     }
 
-    // Handle worker deaths and restart them
     cluster.on('exit', (worker, code, signal) => {
-        console.log(`Worker ${worker.process.pid} died with code: ${code} and signal: ${signal}`)
-        console.log('Starting a new worker')
+        console.log(
+            `Worker ${worker.process.pid} died (code: ${code}, signal: ${signal}). Restarting...`
+        )
         cluster.fork()
     })
+} else {
+    startServer()
 }
