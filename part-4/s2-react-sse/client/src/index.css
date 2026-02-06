@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-[#212121] text-[#ececec] font-sans antialiased;
+  margin: 0;
+}
+
+/* ChatGPT cursor animation */
+.streaming-cursor::after {
+  content: "●";
+  @apply ml-0.5 text-gray-400 inline-block text-[0.8em] align-middle;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+
+  from,
+  to {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-white/10 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-white/20;
+}
+
+.chat-input-focus:focus-within {
+  @apply border-white/20 ring-1 ring-white/10;
+}
