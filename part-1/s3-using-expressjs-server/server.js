@@ -1,40 +1,50 @@
-const express = require('express')
-const compression = require('compression')
+const express = require("express")
+const app = express()
+app.use(express.json())
 
-const port = 3000
+const get_user = require("./routes/get_user")
 
+app.use("/app/user-details", get_user)
 
-// Function to create and set up the Express app
-const createApp = () => {
-    const app = express()
+app.get("/app/user", (req, res) => {
+  res.status(200).json({
+    message: "Query parameters received",
+    queryParams: req.query,
+  })
+})
 
-    /** ECS Healthcheck Endpoint */
-    app.get('/', (req, res) => {
-        res.status(200).json({
-            status: 'OK',
-            message: 'Service is running',
-        })
+app.get("/app/user/:id", (req, res) => {
+  res.status(200).json({
+    message: "Path parameter received",
+    userId: req.params.id,
+  })
+})
+
+app.post("/app/user", (req, res) => {
+  const { name, email } = req.body
+
+  if (!name || !email) {
+    return res.status(400).json({
+      error: "name and email are required",
     })
+  }
 
-    app.use(express.urlencoded({ extended: true }))
-    app.use(express.json())
-    app.use(compression())
+  res.status(201).json({
+    message: "User created",
+    user: {
+      id: Date.now(),
+      name,
+      email,
+    },
+  })
+})
 
-    return app
-}
+app.use((req, res) => {
+  res.status(404).json({
+    error: "Route not found",
+  })
+})
 
-// Function to start the server
-const startServer = async () => {
-    try {
-
-        const app = createApp()
-        app.listen(port, () => {
-            console.log(`Server is running on http://localhost:${port}`)
-        })
-    } catch (error) {
-        console.error(error)
-        process.exit(1) // Exit process with failure
-    }
-}
-
-startServer()
+app.listen(3000, () => {
+  console.log("Server running on http://localhost:3000")
+})

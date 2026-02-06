@@ -1,0 +1,3 @@
+```
+curl -X OPTIONS http://localhost:3000 -i
+```
