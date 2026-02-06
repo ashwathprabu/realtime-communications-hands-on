@@ -1,0 +1,44 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "p2-s1 - cricket",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/part-2/s1-long-short-polling/short-long-polling-demo/cricket-live-score/server.js"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "p2-s2 - weather",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/part-2/s1-long-short-polling/short-long-polling-demo/weather-app/server.js"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "p2-s2 socketdemo",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/part-2/s2-socket-io/server.js"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "p2-s3 - ssedemo",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/part-2/s3-server-sent-events/server.js"
+        }
+    ]
+}

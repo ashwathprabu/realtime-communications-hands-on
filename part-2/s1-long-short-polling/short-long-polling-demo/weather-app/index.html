@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard - Long Polling</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-50 text-slate-900 font-sans flex items-center justify-center min-h-screen">
+    <div
+        class="max-w-sm w-full bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-8 border border-slate-100">
+        <div class="flex flex-col items-center">
+            <h1 class="text-slate-400 font-medium text-sm uppercase tracking-widest mb-2">Current Weather</h1>
+            <p id="city" class="text-3xl font-bold text-slate-800 mb-8">San Francisco</p>
+
+            <div class="relative mb-8">
+                <div class="absolute -inset-4 bg-blue-100 rounded-full blur-xl opacity-50"></div>
+                <div id="weather-icon" class="relative group">
+                    <span id="temp" class="text-8xl font-black text-slate-900 tracking-tighter">62</span>
+                    <span class="text-4xl font-light text-slate-400 absolute -top-2 -right-6">°</span>
+                </div>
+            </div>
+
+            <div id="condition" class="px-6 py-2 bg-slate-100 rounded-full text-slate-600 font-semibold text-sm mb-12">
+                Sunny
+            </div>
+
+            <div class="w-full space-y-4">
+                <div class="flex items-center justify-between text-xs text-slate-400 border-b border-slate-50 pb-4">
+                    <span>Protocol</span>
+                    <span class="font-bold text-slate-600">Long Polling</span>
+                </div>
+                <div class="flex items-center justify-between text-xs text-slate-400 border-b border-slate-50 pb-4">
+                    <span>Status</span>
+                    <div class="flex items-center space-x-1.5">
+                        <span id="status-dot" class="w-2 h-2 bg-amber-400 rounded-full"></span>
+                        <span id="status-text" class="font-bold text-slate-600">Waiting for update...</span>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span>Last Synced</span>
+                    <span id="last-updated" class="font-bold text-slate-600 uppercase">Just now</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tempEl = document.getElementById('temp');
+        const conditionEl = document.getElementById('condition');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const lastUpdatedEl = document.getElementById('last-updated');
+
+        async function pollWeather() {
+            statusDot.className = 'w-2 h-2 bg-amber-400';
+            statusText.innerText = 'Connected, waiting...';
+
+            try {
+                console.log('Initiating long poll request...');
+                const response = await fetch('/api/weather');
+
+                if (response.status === 200) {
+                    const data = await response.json();
+
+                    // Update UI
+                    tempEl.innerText = data.temp;
+                    conditionEl.innerText = data.condition;
+                    lastUpdatedEl.innerText = data.lastUpdated;
+
+                    // Visual feedback
+                    statusDot.className = 'w-2 h-2 bg-green-500 animate-ping';
+                    statusText.innerText = 'Update received!';
+
+                    setTimeout(() => {
+                        statusDot.classList.remove('animate-ping');
+                    }, 1000);
+                } else if (response.status === 204) {
+                    console.log('Timeout received, re-polling...');
+                }
+
+                // Immediately initiate the next request
+                pollWeather();
+
+            } catch (error) {
+                console.error('Polling error:', error);
+                statusDot.className = 'w-2 h-2 bg-red-500';
+                statusText.innerText = 'Network Error. Retrying...';
+
+                // Retry after 5 seconds on error
+                setTimeout(pollWeather, 5000);
+            }
+        }
+
+        // Start long polling
+        pollWeather();
+    </script>
+</body>
+
+</html>
