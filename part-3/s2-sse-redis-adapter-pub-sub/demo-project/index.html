@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSE Redis Pub/Sub Stock Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .server-a {
+            border-left: 4px solid #10b981;
+        }
+
+        /* Emerald */
+        .server-b {
+            border-left: 4px solid #f59e0b;
+        }
+
+        /* Amber */
+        .system {
+            color: #6b7280;
+            font-style: italic;
+        }
+
+        @keyframes pulse-once {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.02);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .animate-pulse-once {
+            animation: pulse-once 0.3s ease-in-out;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen font-sans">
+    <div class="max-w-4xl mx-auto p-6">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">SSE Redis Stock Sync Demo</h1>
+            <p class="text-gray-600">Cross-server price updates using Server-Sent Events & Redis Pub/Sub</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Control Panel -->
+            <div class="bg-white p-6 rounded-xl shadow-md space-y-4 h-fit">
+                <h2 class="text-xl font-semibold text-gray-700 border-b pb-2">Settings</h2>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">User ID</label>
+                    <input type="text" id="userId" value="Trader1"
+                        class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Stock Symbol</label>
+                    <input type="text" id="symbol" value="AAPL"
+                        class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Target Server</label>
+                    <div class="space-y-2">
+                        <label
+                            class="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="radio" name="server" value="http://localhost:3000" checked
+                                class="w-4 h-4 text-emerald-600">
+                            <div>
+                                <span class="font-medium block">Server A</span>
+                                <span class="text-xs text-gray-500">Port 3000</span>
+                            </div>
+                        </label>
+                        <label
+                            class="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="radio" name="server" value="http://localhost:3001"
+                                class="w-4 h-4 text-amber-600">
+                            <div>
+                                <span class="font-medium block">Server B</span>
+                                <span class="text-xs text-gray-500">Port 3001</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <button id="connect-btn"
+                    class="w-full py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition shadow-lg active:transform active:scale-95">
+                    Start Watching
+                </button>
+
+                <div id="status" class="text-center text-sm font-medium text-gray-500 mt-2">
+                    Not connected
+                </div>
+
+                <div class="pt-4 border-t">
+                    <button id="buy-btn"
+                        class="w-full py-3 bg-blue-600 text-white rounded-xl font-black text-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition transform hover:-translate-y-1 shadow-xl active:translate-y-0"
+                        disabled>
+                        BUY 10 SHARES
+                    </button>
+                    <p class="text-[10px] text-center text-gray-400 mt-2">Sends POST /stock/buy to connected server</p>
+                </div>
+            </div>
+
+            <!-- Events Panel -->
+            <div class="md:col-span-2 flex flex-col bg-white rounded-xl shadow-md h-[650px] overflow-hidden">
+                <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
+                    <h2 class="font-semibold text-gray-700">Live Trade Stream</h2>
+                    <div id="active-symbol" class="text-xs font-mono bg-emerald-100 text-emerald-700 px-2 py-1 rounded">
+                        No Active Symbol</div>
+                </div>
+
+                <div id="events" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 font-mono text-sm">
+                    <div class="text-center text-gray-400 italic mt-10">Start watching to receive trade notifications...
+                    </div>
+                </div>
+
+                <div class="p-3 bg-gray-50 border-t text-[10px] text-gray-400 flex justify-between">
+                    <span>SSE EventSource Active</span>
+                    <span id="update-count">0 updates received</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let eventSource = null;
+        let updateCount = 0;
+        const eventsContainer = document.getElementById('events');
+        const userIdInput = document.getElementById('userId');
+        const symbolInput = document.getElementById('symbol');
+        const connectBtn = document.getElementById('connect-btn');
+        const buyBtn = document.getElementById('buy-btn');
+        const statusDiv = document.getElementById('status');
+        const symbolIndicator = document.getElementById('active-symbol');
+        const countIndicator = document.getElementById('update-count');
+
+        function logEvent(data, type = 'update') {
+            const div = document.createElement('div');
+            const time = new Date().toLocaleTimeString();
+
+            if (type === 'update') {
+                updateCount++;
+                countIndicator.textContent = `${updateCount} updates received`;
+
+                const trade = typeof data === 'string' ? JSON.parse(data) : data;
+                const isServerA = trade.server === 'Server-A';
+
+                div.className = `p-3 bg-white rounded border shadow-sm border-l-4 ${isServerA ? 'border-l-emerald-500' : 'border-l-amber-500'} animate-pulse-once`;
+                div.innerHTML = `
+                    <div class="flex justify-between items-center text-[10px] text-gray-400 mb-1">
+                        <span>${time}</span>
+                        <span class="font-bold text-gray-500 uppercase tracking-tighter bg-gray-100 px-1 rounded">${trade.server}</span>
+                        <span class="font-bold text-blue-600">${trade.type}</span>
+                    </div>
+                    <div class="flex justify-between items-baseline">
+                        <span class="font-bold text-gray-800">${trade.user}</span>
+                        <span class="text-gray-600 text-xs text-right">bot ${trade.qty} @ $${trade.price}</span>
+                    </div>
+                `;
+            } else if (type === 'system') {
+                div.className = "text-center text-[10px] text-gray-400 bg-gray-100 rounded py-1 my-2";
+                div.textContent = `[SYSTEM] ${time}: ${data}`;
+            }
+
+            eventsContainer.appendChild(div);
+            eventsContainer.scrollTop = eventsContainer.scrollHeight;
+        }
+
+        connectBtn.onclick = () => {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+                connectBtn.textContent = 'Start Watching';
+                connectBtn.className = connectBtn.className.replace('bg-red-600', 'bg-emerald-600').replace('hover:bg-red-700', 'hover:bg-emerald-700');
+                statusDiv.textContent = 'Disconnected';
+                statusDiv.className = 'text-center text-sm font-medium text-gray-500 mt-2';
+                buyBtn.disabled = true;
+                symbolIndicator.textContent = 'No Active Symbol';
+                return;
+            }
+
+            const serverBase = document.querySelector('input[name="server"]:checked').value;
+            const userId = userIdInput.value || 'Trader';
+            const symbol = symbolInput.value.toUpperCase() || 'AAPL';
+
+            const url = `${serverBase}/sse/stock?symbol=${symbol}&userId=${userId}`;
+
+            statusDiv.textContent = 'Initializing SSE...';
+            eventSource = new EventSource(url);
+
+            eventSource.addEventListener('system', (e) => {
+                logEvent(e.data, 'system');
+                statusDiv.textContent = `Connected to ${serverBase.includes('3000') ? 'Server A' : 'Server B'}`;
+                statusDiv.className = 'text-center text-sm font-medium text-emerald-600 mt-2';
+                connectBtn.textContent = 'Stop Watching';
+                connectBtn.className = connectBtn.className.replace('bg-emerald-600', 'bg-red-600').replace('hover:bg-emerald-700', 'hover:bg-red-700');
+                buyBtn.disabled = false;
+                symbolIndicator.textContent = `Watching: ${symbol}`;
+                eventsContainer.innerHTML = '';
+            });
+
+            eventSource.addEventListener('update', (e) => {
+                logEvent(e.data, 'update');
+            });
+
+            eventSource.onerror = (e) => {
+                console.error('SSE Error:', e);
+                statusDiv.textContent = 'Connection Error';
+                statusDiv.className = 'text-center text-sm font-medium text-red-600 mt-2';
+                if (eventSource) eventSource.close();
+                eventSource = null;
+                connectBtn.textContent = 'Start Watching';
+                buyBtn.disabled = true;
+            };
+        };
+
+        buyBtn.onclick = async () => {
+            const serverBase = document.querySelector('input[name="server"]:checked').value;
+            const userId = userIdInput.value || 'Trader';
+            const symbol = symbolInput.value.toUpperCase() || 'AAPL';
+
+            buyBtn.disabled = true;
+            const originalText = buyBtn.textContent;
+            buyBtn.textContent = 'BUYING...';
+
+            try {
+                const res = await fetch(`${serverBase}/stock/buy`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, symbol, qty: 10 })
+                });
+
+                if (!res.ok) throw new Error('Post failed');
+
+                const processedBy = res.headers.get('X-Server');
+                console.log('Buy order successful, processed by:', processedBy);
+                logEvent(`Order processed by ${processedBy} (from response header)`, 'system');
+            } catch (err) {
+                alert('Failed to place buy order: ' + err.message);
+            } finally {
+                buyBtn.disabled = false;
+                buyBtn.textContent = originalText;
+            }
+        };
+    </script>
+</body>
+
+</html>
