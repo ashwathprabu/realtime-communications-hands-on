@@ -17,3 +17,6 @@ docker exec -it redis redis-cli
 PUBLISH chat "hello from redis"
 
 ```
+
+// issues
+docker rm redis 

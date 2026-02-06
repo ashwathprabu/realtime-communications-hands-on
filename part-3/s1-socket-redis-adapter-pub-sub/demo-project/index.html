@@ -163,7 +163,11 @@
 
             statusDiv.textContent = 'Connecting...';
 
-            socket = io(serverUrl);
+            const serverLabel = serverUrl.includes('3000') ? 'A' : 'B';
+            socket = io('http://localhost:8080', {
+                query: { "x-server": serverLabel },
+                extraHeaders: { "X-Server": serverLabel }
+            });
 
             socket.on('connect', () => {
                 statusDiv.textContent = `Connected to ${serverUrl.includes('3000') ? 'Server A' : 'Server B'}`;
