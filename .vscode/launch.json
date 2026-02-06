@@ -7,69 +7,6 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "p1-s1 - buildinghttp",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "program": "${workspaceFolder}/part-1/s1-building-http-server/server.js"
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "p1-s2 - httpmodule",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "program": "${workspaceFolder}/part-1/s2-understanding-http-module/index.js"
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "p1-s3 - expressserver",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "program": "${workspaceFolder}/part-1/s3-using-expressjs-server/server.js"
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "p2-s1 - cricket",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "program": "${workspaceFolder}/part-2/s1-long-short-polling/short-long-polling-demo/cricket-live-score/server.js"
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "p2-s2 - weather",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "program": "${workspaceFolder}/part-2/s1-long-short-polling/short-long-polling-demo/weather-app/server.js"
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "p2-s2 socketdemo",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "program": "${workspaceFolder}/part-2/s2-socket-io/server.js"
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "p2-s3 - ssedemo",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "program": "${workspaceFolder}/part-2/s3-server-sent-events/server.js"
-        },
-        {
-            "type": "node",
-            "request": "launch",
             "name": "p3 - s1 - socketredispubsub",
             "skipFiles": [
                 "<node_internals>/**"
