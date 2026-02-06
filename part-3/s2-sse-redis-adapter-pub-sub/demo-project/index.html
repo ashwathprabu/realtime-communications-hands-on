@@ -191,8 +191,13 @@
             const userId = userIdInput.value || 'Trader';
             const symbol = symbolInput.value.toUpperCase() || 'AAPL';
 
-            const url = `${serverBase}/sse/stock?symbol=${symbol}&userId=${userId}`;
+            const serverLabel = serverBase.includes('3000') ? 'A' : 'B';
+            const url = `http://localhost:8080/sse/stock?symbol=${symbol}&userId=${userId}&x-server=${serverLabel}`;
+            // Note: Native EventSource doesn't support custom headers easily. 
+            // We'll pass the server preference as a query param and rely on Nginx or update Nginx to handle this if needed.
+            // However, the user specifically mentioned connecting to Nginx.
 
+            console.log(url);
             statusDiv.textContent = 'Initializing SSE...';
             eventSource = new EventSource(url);
 
@@ -232,9 +237,13 @@
             buyBtn.textContent = 'BUYING...';
 
             try {
-                const res = await fetch(`${serverBase}/stock/buy`, {
+                const serverLabel = serverBase.includes('3000') ? 'A' : 'B';
+                const res = await fetch(`http://localhost:8080/stock/buy`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Server': serverLabel
+                    },
                     body: JSON.stringify({ userId, symbol, qty: 10 })
                 });
 
